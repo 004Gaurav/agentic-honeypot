@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Request, Body
 from typing import Optional
 from pydantic import BaseModel
 import os
@@ -65,15 +65,19 @@ def calculate_risk(msg, upi, links, phones):
 # Health
 # ---------------------------
 @app.post("/honeypot/chat")
-async def honeypot_chat(x_api_key: str = Header(None, alias="x-api-key")):
+async def honeypot_chat(
+    body: dict = Body(default={}),
+    x_api_key: str = Header(None, alias="x-api-key")
+):
 
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     return {
         "status": "success",
-        "reply": "Hello, I am not sure how banking works. Can you explain?",
-        "risk_score": 20,
+        "message": "Honeypot active",
+        "reply": "Hello, can you explain more?",
+        "risk_score": 10,
         "extracted_info": {
             "upi_id": [],
             "links": [],
