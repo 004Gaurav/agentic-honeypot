@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from typing import Optional
 from pydantic import BaseModel
 import os
@@ -72,49 +72,38 @@ def health():
 # Honeypot Chat
 # ---------------------------
 @app.post("/honeypot/chat")
-def honeypot_chat(req: ChatRequest, x_api_key: str = Header(None, alias="x-api-key")):
+async def honeypot_chat(request: Request, x_api_key: str = Header(None, alias="x-api-key")):
 
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    history = memory_store.get(req.session_id, [])
+    body = await request.json()
 
-    history.append({"role": "user", "content": req.message})
+    # Flexible parsing
+    message = body.get("message") or body.get("text") or "Hello"
+    session_id = body.get("session_id", "default")
 
-    # Scam detection
-    msg_lower = req.message.lower()
-    scam_keywords = ["money","otp","bank","urgent","transfer","lottery","upi"]
-    is_scam = any(word in msg_lower for word in scam_keywords)
+    history = memory_store.get(session_id, [])
+    history.append({"role": "user", "content": message})
 
-    # ---------------------------
-    # AI Reply (via ai_client)
-    # ---------------------------
+    # AI reply
     reply = get_ai_reply(history)
 
     history.append({"role": "assistant", "content": reply})
-    memory_store[req.session_id] = history
+    memory_store[session_id] = history
 
-    # ---------------------------
     # Extraction
-    # ---------------------------
-    upi_ids = extract_upi(req.message)
-    links = extract_links(req.message)
-    phones = extract_phone_numbers(req.message)
+    upi_ids = extract_upi(message)
+    links = extract_links(message)
+    phones = extract_phone_numbers(message)
 
-    # ---------------------------
-    # Risk Score
-    # ---------------------------
-    risk_score = calculate_risk(req.message, upi_ids, links, phones)
+    # Risk
+    risk_score = calculate_risk(message, upi_ids, links, phones)
 
-    # ---------------------------
-    # Response
-    # ---------------------------
     return {
         "status": "success",
-        "is_scam": is_scam,
-        "risk_score": risk_score,
         "reply": reply,
-        "conversation_memory": history[-6:],
+        "risk_score": risk_score,
         "extracted_info": {
             "upi_id": upi_ids,
             "links": links,
