@@ -64,30 +64,34 @@ def calculate_risk(msg, upi, links, phones):
 # ---------------------------
 # Health
 # ---------------------------
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-# ---------------------------
-# Honeypot Chat
-# ---------------------------
 @app.post("/honeypot/chat")
 async def honeypot_chat(request: Request, x_api_key: str = Header(None, alias="x-api-key")):
 
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    body = await request.json()
+    # READ RAW BODY SAFELY
+    try:
+        raw_body = await request.body()
+        if raw_body:
+            import json
+            body = json.loads(raw_body)
+        else:
+            body = {}
+    except:
+        body = {}
 
-    # Flexible parsing
     message = body.get("message") or body.get("text") or "Hello"
     session_id = body.get("session_id", "default")
 
     history = memory_store.get(session_id, [])
     history.append({"role": "user", "content": message})
 
-    # AI reply
-    reply = get_ai_reply(history)
+    # SAFE AI reply
+    try:
+        reply = get_ai_reply(history)
+    except:
+        reply = "I am not very good with banking... can you explain?"
 
     history.append({"role": "assistant", "content": reply})
     memory_store[session_id] = history
