@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Header, HTTPException
+from typing import Optional
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
@@ -23,9 +24,9 @@ memory_store = {}
 # ---------------------------
 # Request Model
 # ---------------------------
-class ChatRequest(BaseModel):
-    session_id: str
+class ChatRequest(BaseModel):    
     message: str
+    session_id: Optional[str] = "default"
 
 # ---------------------------
 # Extraction Functions
