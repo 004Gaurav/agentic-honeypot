@@ -1,0 +1,7 @@
+Watch for:
+- UPI IDs
+- phone numbers
+- bank accounts
+- links
+
+These are valuable scam intelligence.
