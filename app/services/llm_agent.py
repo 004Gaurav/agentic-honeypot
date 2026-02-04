@@ -1,62 +1,44 @@
 import httpx
+from pathlib import Path
+
 from app.core.logging import logger
+from app.core.config import OLLAMA_URL, MODEL
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
+# Load system prompt
+try:
+    SYSTEM_PROMPT = Path("app/prompts/system.txt").read_text(encoding="utf-8")
+except:
+    SYSTEM_PROMPT = "You are a polite, slightly confused human."
 
-# Load persona prompt from file
-SYSTEM_PROMPT = open("app/prompts/system.txt").read()
 
-
-async def generate_reply(
-    text: str,
-    history=None,
-    metadata=None
-) -> str:
-    """
-    Generate LLM reply using conversation context
-    """
+async def generate_reply(text: str, history=None, metadata=None):
 
     history = history or []
     metadata = metadata or {}
 
-    # -------- BUILD HISTORY CONTEXT --------
+    # -------- BUILD CONTEXT --------
     history_text = ""
 
-    for h in history[-5:]:  # last 5 messages only
-        sender = h.get("sender", "user")
-        msg = h.get("text", "")
-        history_text += f"{sender}: {msg}\n"
+    for h in history[-5:]:
+        history_text += f"{h.get('sender')}: {h.get('text')}\n"
 
-    # -------- METADATA CONTEXT --------
-    meta_text = ""
-    if metadata:
-        meta_text = (
-            f"Channel: {metadata.get('channel','')}, "
-            f"Language: {metadata.get('language','')}, "
-            f"Locale: {metadata.get('locale','')}\n"
-        )
-
-    # -------- FINAL PROMPT --------
     prompt = f"""
 {SYSTEM_PROMPT}
 
 Conversation so far:
 {history_text}
 
-Context:
-{meta_text}
-
 Stranger: {text}
 You:
 """
 
-    # -------- LLM CALL --------
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
+        async with httpx.AsyncClient(timeout=60) as client:
+
             response = await client.post(
                 OLLAMA_URL,
                 json={
-                    "model": "qwen2.5:3b",
+                    "model": MODEL,
                     "prompt": prompt,
                     "stream": False,
                     "options": {
@@ -67,16 +49,61 @@ You:
             )
 
         data = response.json()
+
         reply = data.get("response", "").strip()
 
-        logger.info(f"Qwen reply: {reply}")
+        logger.info(f"LLM reply: {reply}")
 
-        # Safety fallback
         if reply:
             return reply
 
     except Exception as e:
         logger.error(f"Ollama error: {e}")
 
-    # -------- FALLBACK --------
-    return "I am a bit confused. Can you explain more?"
+    return "I am not sure I understand. Can you explain?"
+
+async def generate_agent_notes(history: list) -> str:
+    """
+    Generate summary notes about scammer behavior
+    """
+
+    convo = ""
+
+    for h in history[-10:]:
+        convo += f"{h.get('sender')}: {h.get('text')}\n"
+
+    prompt = f"""
+Analyze the scam conversation below.
+
+Write 1 short sentence summarizing:
+- scammer tactics
+- intent
+- style
+
+Conversation:
+{convo}
+
+Summary:
+"""
+
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            response = await client.post(
+                OLLAMA_URL,
+                json={
+                    "model": MODEL,
+                    "prompt": prompt,
+                    "stream": False
+                }
+            )
+
+        data = response.json()
+        notes = data.get("response", "").strip()
+
+        if notes:
+            return notes
+
+    except Exception as e:
+        logger.error(f"AgentNotes error: {e}")
+
+    return "Scammer used urgency and financial manipulation."
