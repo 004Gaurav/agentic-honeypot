@@ -1,6 +1,7 @@
 import httpx
 from app.core.config import GUVI_CALLBACK_URL
 from app.core.logging import logger
+from app.services.llm_agent import generate_agent_notes
 
 
 async def send_callback(
@@ -12,27 +13,25 @@ async def send_callback(
     Sends final intelligence to GUVI
     """
 
+    intelligence_dict = {
+        "bankAccounts": list(session_data.get("bankAccounts", [])),
+        "upiIds": list(session_data.get("upiIds", [])),
+        "phishingLinks": list(session_data.get("phishingLinks", [])),
+        "phoneNumbers": list(session_data.get("phoneNumbers", [])),
+        "suspiciousKeywords": list(session_data.get("suspiciousKeywords", []))
+    }
+    agent_notes = await generate_agent_notes(
+    session_data.get("history", [])
+)
+
     payload = {
         "sessionId": session_id,
-
-        # dynamic flag
         "scamDetected": scam_detected,
-
         "totalMessagesExchanged": session_data.get("message_count", 0),
-
-        "extractedIntelligence": {
-            "bankAccounts": list(session_data.get("bankAccounts", [])),
-            "upiIds": list(session_data.get("upiIds", [])),
-            "phishingLinks": list(session_data.get("phishingLinks", [])),
-            "phoneNumbers": list(session_data.get("phoneNumbers", [])),
-            "suspiciousKeywords": list(session_data.get("suspiciousKeywords", []))
-        },
-
-        "agentNotes": (
-            "Scammer used social engineering tactics, urgency language, "
-            "and attempted financial redirection."
-        )
+        "extractedIntelligence": intelligence_dict,
+        "agentNotes": agent_notes
     }
+
 
     try:
         async with httpx.AsyncClient(timeout=5) as client:
