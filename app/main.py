@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from app.api.routes import router
 from app.core.logging import logger
+import sys
+
+sys.stdout.reconfigure(encoding='utf-8')
 
 app = FastAPI(
     title="Agentic Honeypot API",

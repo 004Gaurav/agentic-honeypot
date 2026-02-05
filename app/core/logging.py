@@ -1,5 +1,5 @@
 import logging
-import os
+import os, sys
 
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -11,6 +11,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
         logging.FileHandler(LOG_FILE),
+        logging.StreamHandler(sys.stdout),
         logging.StreamHandler()
     ]
 )

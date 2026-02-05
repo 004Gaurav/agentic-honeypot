@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 # -------- SECURITY --------
@@ -11,15 +10,18 @@ if not API_KEY:
     print("WARNING: API_KEY not set")
 
 
-# -------- OLLAMA CONFIG --------
+# -------- OPENROUTER CONFIG --------
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+if not OPENROUTER_API_KEY:
+    print("WARNING: OPENROUTER_API_KEY not set")
+
 MODEL = os.getenv(
-    "MODEL"     
+    "MODEL",
+    "arcee-ai/trinity-large-preview:free"
 )
 
-HF_URL = os.getenv(
-    "HF_URL",
-    "http://localhost:11434/api/generate"
-)
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 # -------- GUVI CALLBACK --------
