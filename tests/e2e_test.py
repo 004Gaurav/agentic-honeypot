@@ -86,4 +86,3 @@ print("\n Check your server logs now.")
 print("You should see a callback sent after 5th message.")
 
 
-# Final end-to-end test script
