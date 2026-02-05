@@ -1,8 +1,12 @@
 import httpx
+import os
 from pathlib import Path
 
 from app.core.logging import logger
-from app.core.config import OLLAMA_URL, MODEL
+from app.core.config import  MODEL
+
+HF_API_KEY = os.getenv("HF_API_KEY")
+HF_URL = f"https://api-inference.huggingface.co/models/{MODEL}"
 
 # Load system prompt
 try:
@@ -36,21 +40,23 @@ You:
         async with httpx.AsyncClient(timeout=60) as client:
 
             response = await client.post(
-                OLLAMA_URL,
+                HF_URL,
+                headers={
+                    "Authorization": f"Bearer {HF_API_KEY}"},
                 json={
-                    "model": MODEL,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
+                    "inputs": prompt,
+                    "parameters": {
                         "temperature": 0.7,
-                        "num_predict": 60
+                        "max_new_tokens": 60,
+                        "return_full_text": False
                     }
                 }
             )
 
         data = response.json()
 
-        reply = data.get("response", "").strip()
+        if isinstance(data, list) and len(data) > 0:
+            reply = data[0].get("generated_text", "").strip()
 
         logger.info(f"LLM reply: {reply}")
 
@@ -58,7 +64,7 @@ You:
             return reply
 
     except Exception as e:
-        logger.error(f"Ollama error: {e}")
+        logger.error(f"LLM error: {e}")
 
     return "I am not sure I understand. Can you explain?"
 
@@ -89,16 +95,24 @@ Summary:
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             response = await client.post(
-                OLLAMA_URL,
+                HF_URL,
+                headers={
+                    "Authorization": f"Bearer {HF_API_KEY}"
+                },
                 json={
-                    "model": MODEL,
-                    "prompt": prompt,
-                    "stream": False
+                    "inputs": prompt,
+                    "parameters": {
+                        "temperature": 0.5,
+                        "max_new_tokens": 40,
+                        "return_full_text": False
+                        }
                 }
             )
 
         data = response.json()
-        notes = data.get("response", "").strip()
+        
+        if isinstance(data, list) and len(data) > 0:
+            notes = data[0].get("generated_text", "").strip()
 
         if notes:
             return notes

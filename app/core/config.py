@@ -13,12 +13,11 @@ if not API_KEY:
 
 # -------- OLLAMA CONFIG --------
 MODEL = os.getenv(
-    "MODEL",
-    "qwen2.5:1.5b"  # default safe model
+    "MODEL"     
 )
 
-OLLAMA_URL = os.getenv(
-    "OLLAMA_URL",
+HF_URL = os.getenv(
+    "HF_URL",
     "http://localhost:11434/api/generate"
 )
 
