@@ -7,9 +7,10 @@ from app.services.extractor import extract_all
 from app.services.memory import (
     cleanup_sessions,
     update_session,
+    get_session,
     mark_callback_sent
 )
-from app.services.llm_agent import generate_reply
+from app.services.llm_agent import generate_reply ,  generate_agent_notes
 from app.services.callback import send_callback
 
 router = APIRouter()
@@ -43,6 +44,7 @@ async def honeypot_chat(
 
     msg = data.get("message") or {}
     text = msg.get("text", "")
+    sender = msg.get("sender", "scammer")
 
     history = data.get("conversationHistory", []) or []
     metadata = data.get("metadata", {}) or {}
@@ -57,6 +59,9 @@ async def honeypot_chat(
 
     # ---------------- MEMORY UPDATE ----------------
     session = update_session(session_id, extracted)
+
+    # Store history for notes
+    session.setdefault("history", []).append(...)
 
     # Track suspicious keywords (spec requirement)
     KEYWORDS = ["urgent", "verify", "blocked", "suspend"]
@@ -74,22 +79,36 @@ async def honeypot_chat(
     if not reply:
         reply = "Can you explain more?"
 
+    # Add agent reply to session history
+    session["history"].append({
+        "sender": "user",
+        "text": reply
+    })
+
     # ---------------- CALLBACK LOGIC ----------------
-    # Spec-perfect: send only if intelligence extracted
-    if (
+    should_callback = (
         scam_detected
         and session["message_count"] >= 5
+        and not session["callback_sent"]
         and (
             session["upiIds"]
             or session["phishingLinks"]
             or session["bankAccounts"]
+            or session["phoneNumbers"]
+            or session["suspiciousKeywords"]
         )
-        and not session["callback_sent"]
-    ):
+    )
+
+    if should_callback:
+
+        agent_notes = await generate_agent_notes(
+            session.get("history", [])
+        )
         success = await send_callback(
     session_id,
     session,
-    scam_detected=scam_detected
+    scam_detected=scam_detected,
+    agent_notes=agent_notes
 )
 
         if success:
