@@ -7,6 +7,7 @@ from app.services.llm_agent import generate_agent_notes
 async def send_callback(
     session_id: str,
     session_data: dict,
+    agent_notes: str,
     scam_detected: bool = True
 ):
     """
@@ -20,19 +21,16 @@ async def send_callback(
         "phoneNumbers": list(session_data.get("phoneNumbers", [])),
         "suspiciousKeywords": list(session_data.get("suspiciousKeywords", []))
     }
-    agent_notes = await generate_agent_notes(
-    session_data.get("history", [])
-)
-
     payload = {
         "sessionId": session_id,
         "scamDetected": scam_detected,
         "totalMessagesExchanged": session_data.get("message_count", 0),
         "extractedIntelligence": intelligence_dict,
-        "agentNotes": agent_notes
+        "agentNotes": agent_notes or "Scammer used urgency and financial manipulation."
     }
 
-
+    logger.info(f"[{session_id}] Sending callback payload: {payload}")
+    
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             r = await client.post(
