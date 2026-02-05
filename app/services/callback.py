@@ -1,8 +1,6 @@
 import httpx
 from app.core.config import GUVI_CALLBACK_URL
 from app.core.logging import logger
-from app.services.llm_agent import generate_agent_notes
-
 
 async def send_callback(
     session_id: str,
@@ -30,9 +28,9 @@ async def send_callback(
     }
 
     logger.info(f"[{session_id}] Sending callback payload: {payload}")
-    
+
     try:
-        async with httpx.AsyncClient(timeout=5) as client:
+        async with httpx.AsyncClient(timeout=15) as client:
             r = await client.post(
                 GUVI_CALLBACK_URL,
                 json=payload
@@ -49,3 +47,4 @@ async def send_callback(
     except Exception as e:
         logger.error(f"[{session_id}] Callback failed: {e}")
         return False
+    

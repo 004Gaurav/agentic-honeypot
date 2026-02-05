@@ -6,8 +6,7 @@ from app.services.scam_detector import detect_scam
 from app.services.extractor import extract_all
 from app.services.memory import (
     cleanup_sessions,
-    update_session,
-    get_session,
+    update_session,    
     mark_callback_sent
 )
 from app.services.llm_agent import generate_reply ,  generate_agent_notes
@@ -61,7 +60,8 @@ async def honeypot_chat(
     session = update_session(session_id, extracted)
 
     # Store history for notes
-    session.setdefault("history", []).append(...)
+    session.setdefault("history", []).append({"sender": sender,
+        "text": text})
 
     # Track suspicious keywords (spec requirement)
     KEYWORDS = ["urgent", "verify", "blocked", "suspend"]
@@ -130,10 +130,10 @@ async def honeypot_chat(
         },
 
         "extractedIntelligence": {
-            "bankAccounts": list(session["bankAccounts"]),
-            "upiIds": list(session["upiIds"]),
-            "phoneNumbers": list(session["phoneNumbers"]),
-            "phishingLinks": list(session["phishingLinks"]),
-            "suspiciousKeywords": list(session["suspiciousKeywords"])
+            "bankAccounts": list(session.get("bankAccounts", [])),
+            "upiIds": list(session.get("upiIds", [])),
+            "phoneNumbers": list(session.get("phoneNumbers", [])),
+            "phishingLinks": list(session.get("phishingLinks", [])),
+            "suspiciousKeywords": list(session.get("suspiciousKeywords", []))
         }
     }

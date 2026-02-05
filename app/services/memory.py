@@ -26,8 +26,7 @@ def get_session(session_id: str):
             "phishingLinks": set(),
             "bankAccounts": set(),
             "suspiciousKeywords": set(),
-
-            # callback tracking
+            "history": [],
             "callback_sent": False
         }
 
